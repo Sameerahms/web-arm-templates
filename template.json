@@ -1,0 +1,3724 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "Redis_sameera_name": {
+            "defaultValue": "sameera",
+            "type": "String"
+        },
+        "sites_deniya_app_name": {
+            "defaultValue": "deniya-app",
+            "type": "String"
+        },
+        "Redis_asure_hms_name": {
+            "defaultValue": "asure-hms",
+            "type": "String"
+        },
+        "sites_hms_sql_web_name": {
+            "defaultValue": "hms-sql-web",
+            "type": "String"
+        },
+        "frontdoors_front_end_name": {
+            "defaultValue": "front-end",
+            "type": "String"
+        },
+        "serverfarms_ASP_web_bc8e_name": {
+            "defaultValue": "ASP-web-bc8e",
+            "type": "String"
+        },
+        "servers_mysql_db_sh_name": {
+            "defaultValue": "mysql-db-sh",
+            "type": "String"
+        },
+        "components_AppMonitor_name": {
+            "defaultValue": "AppMonitor",
+            "type": "String"
+        },
+        "actionGroups_Application_Insights_Smart_Detection_name": {
+            "defaultValue": "Application Insights Smart Detection",
+            "type": "String"
+        },
+        "dashboards_7fd83c51_fec2_4eb7_8e1f_2987f2b5a27e_dashboard_name": {
+            "defaultValue": "7fd83c51-fec2-4eb7-8e1f-2987f2b5a27e-dashboard",
+            "type": "String"
+        },
+        "smartdetectoralertrules_failure_anomalies___appmonitor_name": {
+            "defaultValue": "failure anomalies - appmonitor",
+            "type": "String"
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.Cache/Redis",
+            "apiVersion": "2019-07-01",
+            "name": "[parameters('Redis_asure_hms_name')]",
+            "location": "Central US",
+            "properties": {
+                "sku": {
+                    "name": "Standard",
+                    "family": "C",
+                    "capacity": 1
+                },
+                "enableNonSslPort": false,
+                "redisConfiguration": {
+                    "maxclients": "1000",
+                    "maxmemory-reserved": "50",
+                    "maxfragmentationmemory-reserved": "50",
+                    "maxmemory-delta": "50"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Cache/Redis",
+            "apiVersion": "2019-07-01",
+            "name": "[parameters('Redis_sameera_name')]",
+            "location": "Central US",
+            "properties": {
+                "sku": {
+                    "name": "Basic",
+                    "family": "C",
+                    "capacity": 0
+                },
+                "enableNonSslPort": true,
+                "redisConfiguration": {
+                    "maxclients": "256",
+                    "maxmemory-reserved": "2",
+                    "maxfragmentationmemory-reserved": "12",
+                    "maxmemory-delta": "2"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers",
+            "apiVersion": "2017-12-01",
+            "name": "[parameters('servers_mysql_db_sh_name')]",
+            "location": "eastus",
+            "sku": {
+                "name": "B_Gen5_1",
+                "tier": "Basic",
+                "family": "Gen5",
+                "capacity": 1
+            },
+            "properties": {
+                "storageProfile": {
+                    "storageMB": 5120,
+                    "backupRetentionDays": 7,
+                    "geoRedundantBackup": "Disabled",
+                    "storageAutogrow": "Disabled"
+                },
+                "version": "5.7",
+                "sslEnforcement": "Disabled",
+                "minimalTlsVersion": "TLSEnforcementDisabled",
+                "infrastructureEncryption": "Disabled",
+                "publicNetworkAccess": "Enabled"
+            }
+        },
+        {
+            "type": "microsoft.insights/actionGroups",
+            "apiVersion": "2019-03-01",
+            "name": "[parameters('actionGroups_Application_Insights_Smart_Detection_name')]",
+            "location": "Global",
+            "properties": {
+                "groupShortName": "SmartDetect",
+                "enabled": true,
+                "emailReceivers": [],
+                "smsReceivers": [],
+                "webhookReceivers": [],
+                "itsmReceivers": [],
+                "azureAppPushReceivers": [],
+                "automationRunbookReceivers": [],
+                "voiceReceivers": [],
+                "logicAppReceivers": [],
+                "azureFunctionReceivers": []
+            }
+        },
+        {
+            "type": "microsoft.insights/components",
+            "apiVersion": "2018-05-01-preview",
+            "name": "[parameters('components_AppMonitor_name')]",
+            "location": "westus2",
+            "kind": "web",
+            "properties": {
+                "Application_Type": "web",
+                "Flow_Type": "Redfield",
+                "Request_Source": "IbizaAIExtension",
+                "RetentionInDays": 90,
+                "publicNetworkAccessForIngestion": "Enabled",
+                "publicNetworkAccessForQuery": "Enabled"
+            }
+        },
+        {
+            "type": "Microsoft.Network/frontdoors",
+            "apiVersion": "2020-05-01",
+            "name": "[parameters('frontdoors_front_end_name')]",
+            "location": "Global",
+            "properties": {
+                "resourceState": "Enabled",
+                "backendPools": [
+                    {
+                        "id": "[concat(resourceId('Microsoft.Network/frontdoors', parameters('frontdoors_front_end_name')), '/BackendPools/back-end')]",
+                        "name": "back-end",
+                        "properties": {
+                            "backends": [
+                                {
+                                    "address": "deniya-app.azurewebsites.net",
+                                    "httpPort": 80,
+                                    "httpsPort": 443,
+                                    "priority": 1,
+                                    "weight": 50,
+                                    "backendHostHeader": "deniya-app.azurewebsites.net",
+                                    "enabledState": "Enabled"
+                                }
+                            ],
+                            "healthProbeSettings": {
+                                "id": "[concat(resourceId('Microsoft.Network/frontdoors', parameters('frontdoors_front_end_name')), '/healthProbeSettings/healthProbeSettings-1597001161891')]"
+                            },
+                            "loadBalancingSettings": {
+                                "id": "[concat(resourceId('Microsoft.Network/frontdoors', parameters('frontdoors_front_end_name')), '/loadBalancingSettings/loadBalancingSettings-1597001161891')]"
+                            },
+                            "resourceState": "Enabled"
+                        }
+                    }
+                ],
+                "healthProbeSettings": [
+                    {
+                        "id": "[concat(resourceId('Microsoft.Network/frontdoors', parameters('frontdoors_front_end_name')), '/HealthProbeSettings/healthProbeSettings-1597001161891')]",
+                        "name": "healthProbeSettings-1597001161891",
+                        "properties": {
+                            "intervalInSeconds": 30,
+                            "path": "/",
+                            "protocol": "Https",
+                            "resourceState": "Enabled",
+                            "enabledState": "Enabled",
+                            "healthProbeMethod": "Head"
+                        }
+                    }
+                ],
+                "frontendEndpoints": [
+                    {
+                        "id": "[concat(resourceId('Microsoft.Network/frontdoors', parameters('frontdoors_front_end_name')), concat('/FrontendEndpoints/', parameters('frontdoors_front_end_name'), '-azurefd-net'))]",
+                        "name": "[concat(parameters('frontdoors_front_end_name'), '-azurefd-net')]",
+                        "properties": {
+                            "hostName": "[concat(parameters('frontdoors_front_end_name'), '.azurefd.net')]",
+                            "sessionAffinityEnabledState": "Disabled",
+                            "sessionAffinityTtlSeconds": 0,
+                            "resourceState": "Enabled"
+                        }
+                    }
+                ],
+                "loadBalancingSettings": [
+                    {
+                        "id": "[concat(resourceId('Microsoft.Network/frontdoors', parameters('frontdoors_front_end_name')), '/LoadBalancingSettings/loadBalancingSettings-1597001161891')]",
+                        "name": "loadBalancingSettings-1597001161891",
+                        "properties": {
+                            "additionalLatencyMilliseconds": 0,
+                            "sampleSize": 4,
+                            "successfulSamplesRequired": 2,
+                            "resourceState": "Enabled"
+                        }
+                    }
+                ],
+                "routingRules": [
+                    {
+                        "id": "[concat(resourceId('Microsoft.Network/frontdoors', parameters('frontdoors_front_end_name')), '/RoutingRules/Routing')]",
+                        "name": "Routing",
+                        "properties": {
+                            "frontendEndpoints": [
+                                {
+                                    "id": "[concat(resourceId('Microsoft.Network/frontdoors', parameters('frontdoors_front_end_name')), concat('/frontendEndpoints/', parameters('frontdoors_front_end_name'), '-azurefd-net'))]"
+                                }
+                            ],
+                            "acceptedProtocols": [
+                                "Http",
+                                "Https"
+                            ],
+                            "patternsToMatch": [
+                                "/*",
+                                "/path"
+                            ],
+                            "enabledState": "Enabled",
+                            "resourceState": "Enabled",
+                            "routeConfiguration": {
+                                "@odata.type": "#Microsoft.Azure.FrontDoor.Models.FrontdoorForwardingConfiguration",
+                                "forwardingProtocol": "HttpsOnly",
+                                "backendPool": {
+                                    "id": "[concat(resourceId('Microsoft.Network/frontdoors', parameters('frontdoors_front_end_name')), '/backendPools/back-end')]"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "backendPoolsSettings": {
+                    "enforceCertificateNameCheck": "Enabled",
+                    "sendRecvTimeoutSeconds": 30
+                },
+                "enabledState": "Enabled",
+                "friendlyName": "[parameters('frontdoors_front_end_name')]"
+            }
+        },
+        {
+            "type": "Microsoft.Web/serverfarms",
+            "apiVersion": "2018-02-01",
+            "name": "[parameters('serverfarms_ASP_web_bc8e_name')]",
+            "location": "Australia Central",
+            "sku": {
+                "name": "F1",
+                "tier": "Free",
+                "size": "F1",
+                "family": "F",
+                "capacity": 1
+            },
+            "kind": "linux",
+            "properties": {
+                "perSiteScaling": false,
+                "maximumElasticWorkerCount": 1,
+                "isSpot": false,
+                "reserved": true,
+                "isXenon": false,
+                "hyperV": false,
+                "targetWorkerCount": 0,
+                "targetWorkerSizeId": 0
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/audit_log_enabled')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "OFF",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/audit_log_events')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "CONNECTION",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/audit_log_exclude_users')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "azure_superuser",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/audit_log_include_users')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/binlog_expire_logs_seconds')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "0",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/binlog_group_commit_sync_delay')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "1000",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/binlog_group_commit_sync_no_delay_count')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "0",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/binlog_row_image')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "minimal",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/binlog_sum_size_for_stop_pct_max')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "30",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/character_set_server')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "latin1",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/collation_server')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "latin1_swedish_ci",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/default_week_format')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "0",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/div_precision_increment')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "4",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/eq_range_index_dive_limit')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "200",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/event_scheduler')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "OFF",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/flush_time')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "0",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/ft_query_expansion_limit')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "20",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/group_concat_max_len')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "1024",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/init_connect')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_adaptive_flushing')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "ON",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_adaptive_flushing_lwm')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "10",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_adaptive_hash_index')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "ON",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_adaptive_hash_index_parts')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "8",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_adaptive_max_sleep_delay')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "150000",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_autoextend_increment')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "64",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_autoinc_lock_mode')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "1",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_buffer_pool_dump_pct')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "25",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_buffer_pool_size')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "872415232",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_change_buffer_max_size')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "25",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_change_buffering')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "all",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_cmp_per_index_enabled')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "OFF",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_commit_concurrency')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "0",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_compression_failure_threshold_pct')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "5",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_compression_level')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "6",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_compression_pad_pct_max')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "50",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_concurrency_tickets')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "5000",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_deadlock_detect')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "ON",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_default_row_format')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "DYNAMIC",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_file_format')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "Barracuda",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_fill_factor')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "100",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_ft_enable_stopword')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "ON",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_ft_max_token_size')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "84",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_ft_min_token_size')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "3",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_ft_num_word_optimize')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "2000",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_ft_result_cache_limit')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "2000000000",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_ft_sort_pll_degree')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "2",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_io_capacity')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "200",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_io_capacity_max')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "2000",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_large_prefix')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "ON",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_lock_wait_timeout')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "50",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_log_compressed_pages')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "ON",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_lru_scan_depth')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "1024",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_max_dirty_pages_pct')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "75",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_max_dirty_pages_pct_lwm')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "0",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_max_purge_lag')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "0",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_max_purge_lag_delay')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "0",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_old_blocks_pct')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "37",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_old_blocks_time')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "1000",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_online_alter_log_max_size')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "134217728",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_optimize_fulltext_only')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "OFF",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_page_cleaners')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "4",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_purge_batch_size')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "300",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_purge_rseg_truncate_frequency')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "128",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_purge_threads')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "4",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_random_read_ahead')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "OFF",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_read_ahead_threshold')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "56",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_read_io_threads')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "4",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_rollback_segments')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "128",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_stats_auto_recalc')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "ON",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_stats_include_delete_marked')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "OFF",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_stats_method')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "nulls_equal",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_stats_on_metadata')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "OFF",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_stats_persistent')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "ON",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_stats_persistent_sample_pages')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "20",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_stats_transient_sample_pages')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "8",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_sync_array_size')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "1",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_table_locks')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "ON",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_thread_concurrency')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "0",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_thread_sleep_delay')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "10000",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/innodb_write_io_threads')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "4",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/interactive_timeout')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "28800",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/local_infile')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "ON",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/lock_wait_timeout')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "31536000",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/log_bin_trust_function_creators')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "OFF",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/log_output')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "FILE",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/log_queries_not_using_indexes')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "OFF",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/log_slow_admin_statements')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "OFF",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/log_slow_slave_statements')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "OFF",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/log_throttle_queries_not_using_indexes')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "0",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/long_query_time')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "10",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/lower_case_table_names')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "1",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/max_allowed_packet')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "536870912",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/max_connect_errors')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "100",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/max_connections')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "50",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/max_digest_length')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "1024",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/max_error_count')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "64",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/max_execution_time')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "0",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/max_join_size')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "18446744073709551615",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/max_length_for_sort_data')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "1024",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/max_points_in_geometry')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "65536",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/max_prepared_stmt_count')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "16382",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/max_seeks_for_key')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "4294967295",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/max_sort_length')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "1024",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/max_sp_recursion_depth')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "0",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/max_user_connections')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "0",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/max_write_lock_count')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "4294967295",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/min_examined_row_limit')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "0",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/net_buffer_length')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "16384",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/net_read_timeout')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "120",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/net_retry_count')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "10",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/net_write_timeout')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "240",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/optimizer_prune_level')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "1",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/optimizer_search_depth')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "62",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/optimizer_switch')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "default",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/parser_max_mem_size')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "18446744073709551615",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/performance_schema')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "ON",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/preload_buffer_size')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "32768",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/query_store_capture_interval')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "15",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/query_store_capture_mode')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "NONE",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/query_store_capture_utility_queries')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "NO",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/query_store_retention_period_in_days')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "7",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/query_store_wait_sampling_capture_mode')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "NONE",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/query_store_wait_sampling_frequency')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "30",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/read_only')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "OFF",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/redirect_enabled')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "OFF",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/replicate_wild_ignore_table')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "mysql.%",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/server_id')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "2022493843",
+                "source": "user-override"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/session_track_schema')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "ON",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/session_track_state_change')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "OFF",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/show_compatibility_56')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "OFF",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/skip_show_database')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "OFF",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/slave_net_timeout')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "60",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/slow_query_log')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "OFF",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/sql_mode')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/stored_program_cache')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "256",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/table_definition_cache')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "2000",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/table_open_cache')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "2000",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/thread_cache_size')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "8",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/thread_handling')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "one-thread-per-connection",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/thread_pool_batch_max_time')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "0",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/thread_pool_batch_wait_timeout')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "0",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/thread_pool_max_threads')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "65535",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/thread_pool_min_threads')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "1",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/time_zone')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "SYSTEM",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/transaction_alloc_block_size')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "8192",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/transaction_prealloc_size')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "4096",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/tx_isolation')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "REPEATABLE-READ",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/updatable_views_with_limit')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "YES",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/configurations",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/wait_timeout')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "value": "120",
+                "source": "system-default"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/databases",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/information_schema')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "charset": "utf8",
+                "collation": "utf8_general_ci"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/databases",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/mysql')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "charset": "latin1",
+                "collation": "latin1_swedish_ci"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/databases",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/performance_schema')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "charset": "utf8",
+                "collation": "utf8_general_ci"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/databases",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/sys')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "charset": "utf8",
+                "collation": "utf8_general_ci"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/databases",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/users')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "charset": "latin1",
+                "collation": "latin1_swedish_ci"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/firewallRules",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/AllowAllWindowsAzureIps')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "startIpAddress": "0.0.0.0",
+                "endIpAddress": "0.0.0.0"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/firewallRules",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/ClientIPAddress_2020-8-7_18-24-19')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "startIpAddress": "112.135.10.132",
+                "endIpAddress": "112.135.10.132"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/firewallRules",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/ClientIPAddress_2020-8-8_17-20-2')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "startIpAddress": "192.248.24.53",
+                "endIpAddress": "192.248.24.53"
+            }
+        },
+        {
+            "type": "Microsoft.DBforMySQL/servers/firewallRules",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('servers_mysql_db_sh_name'), '/ClientIPAddress_2020-8-8_17-26-0')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforMySQL/servers', parameters('servers_mysql_db_sh_name'))]"
+            ],
+            "properties": {
+                "startIpAddress": "123.231.121.37",
+                "endIpAddress": "123.231.121.37"
+            }
+        },
+        {
+            "type": "Microsoft.Portal/dashboards",
+            "apiVersion": "2019-01-01-preview",
+            "name": "[parameters('dashboards_7fd83c51_fec2_4eb7_8e1f_2987f2b5a27e_dashboard_name')]",
+            "location": "westus2",
+            "dependsOn": [
+                "[resourceId('microsoft.insights/components', parameters('components_AppMonitor_name'))]"
+            ],
+            "tags": {
+                "hidden-title": "AppMonitor Dashboard"
+            },
+            "properties": {
+                "lenses": {
+                    "0": {
+                        "order": 0,
+                        "parts": {
+                            "0": {
+                                "position": {
+                                    "x": 0,
+                                    "y": 0,
+                                    "rowSpan": 1,
+                                    "colSpan": 2
+                                },
+                                "metadata": {
+                                    "inputs": [
+                                        {
+                                            "name": "id",
+                                            "value": "[resourceId('microsoft.insights/components', parameters('components_AppMonitor_name'))]"
+                                        },
+                                        {
+                                            "name": "Version",
+                                            "value": "1.0"
+                                        }
+                                    ],
+                                    "type": "Extension/AppInsightsExtension/PartType/AspNetOverviewPinnedPart",
+                                    "asset": {},
+                                    "defaultMenuItemId": "overview"
+                                }
+                            },
+                            "1": {
+                                "position": {
+                                    "x": 2,
+                                    "y": 0,
+                                    "rowSpan": 1,
+                                    "colSpan": 1
+                                },
+                                "metadata": {
+                                    "inputs": [
+                                        {
+                                            "name": "ComponentId",
+                                            "value": {
+                                                "Name": "AppMonitor",
+                                                "SubscriptionId": "90cd1f48-33e5-4d7f-b79c-09fde0175691",
+                                                "ResourceGroup": "web"
+                                            }
+                                        },
+                                        {
+                                            "name": "Version",
+                                            "value": "1.0"
+                                        }
+                                    ],
+                                    "type": "Extension/AppInsightsExtension/PartType/ProactiveDetectionAsyncPart",
+                                    "asset": {},
+                                    "defaultMenuItemId": "ProactiveDetection"
+                                }
+                            },
+                            "2": {
+                                "position": {
+                                    "x": 3,
+                                    "y": 0,
+                                    "rowSpan": 1,
+                                    "colSpan": 1
+                                },
+                                "metadata": {
+                                    "inputs": [
+                                        {
+                                            "name": "ComponentId",
+                                            "value": {
+                                                "Name": "AppMonitor",
+                                                "SubscriptionId": "90cd1f48-33e5-4d7f-b79c-09fde0175691",
+                                                "ResourceGroup": "web"
+                                            }
+                                        },
+                                        {
+                                            "name": "ResourceId",
+                                            "value": "[resourceId('microsoft.insights/components', parameters('components_AppMonitor_name'))]"
+                                        }
+                                    ],
+                                    "type": "Extension/AppInsightsExtension/PartType/QuickPulseButtonSmallPart",
+                                    "asset": {}
+                                }
+                            },
+                            "3": {
+                                "position": {
+                                    "x": 4,
+                                    "y": 0,
+                                    "rowSpan": 1,
+                                    "colSpan": 1
+                                },
+                                "metadata": {
+                                    "inputs": [
+                                        {
+                                            "name": "ComponentId",
+                                            "value": {
+                                                "Name": "AppMonitor",
+                                                "SubscriptionId": "90cd1f48-33e5-4d7f-b79c-09fde0175691",
+                                                "ResourceGroup": "web"
+                                            }
+                                        },
+                                        {
+                                            "name": "TimeContext",
+                                            "value": {
+                                                "durationMs": 86400000,
+                                                "endTime": null,
+                                                "createdTime": "2018-05-04T01:20:33.345Z",
+                                                "isInitialTime": true,
+                                                "grain": 1,
+                                                "useDashboardTimeRange": false
+                                            }
+                                        },
+                                        {
+                                            "name": "Version",
+                                            "value": "1.0"
+                                        }
+                                    ],
+                                    "type": "Extension/AppInsightsExtension/PartType/AvailabilityNavButtonPart",
+                                    "asset": {}
+                                }
+                            },
+                            "4": {
+                                "position": {
+                                    "x": 5,
+                                    "y": 0,
+                                    "rowSpan": 1,
+                                    "colSpan": 1
+                                },
+                                "metadata": {
+                                    "inputs": [
+                                        {
+                                            "name": "ComponentId",
+                                            "value": {
+                                                "Name": "AppMonitor",
+                                                "SubscriptionId": "90cd1f48-33e5-4d7f-b79c-09fde0175691",
+                                                "ResourceGroup": "web"
+                                            }
+                                        },
+                                        {
+                                            "name": "TimeContext",
+                                            "value": {
+                                                "durationMs": 86400000,
+                                                "endTime": null,
+                                                "createdTime": "2018-05-08T18:47:35.237Z",
+                                                "isInitialTime": true,
+                                                "grain": 1,
+                                                "useDashboardTimeRange": false
+                                            }
+                                        },
+                                        {
+                                            "name": "ConfigurationId",
+                                            "value": "78ce933e-e864-4b05-a27b-71fd55a6afad"
+                                        }
+                                    ],
+                                    "type": "Extension/AppInsightsExtension/PartType/AppMapButtonPart",
+                                    "asset": {}
+                                }
+                            },
+                            "5": {
+                                "position": {
+                                    "x": 0,
+                                    "y": 1,
+                                    "rowSpan": 1,
+                                    "colSpan": 3
+                                },
+                                "metadata": {
+                                    "inputs": [],
+                                    "type": "Extension[azure]/HubsExtension/PartType/MarkdownPart",
+                                    "settings": {}
+                                }
+                            },
+                            "6": {
+                                "position": {
+                                    "x": 3,
+                                    "y": 1,
+                                    "rowSpan": 1,
+                                    "colSpan": 1
+                                },
+                                "metadata": {
+                                    "inputs": [
+                                        {
+                                            "name": "ComponentId",
+                                            "value": {
+                                                "Name": "AppMonitor",
+                                                "SubscriptionId": "90cd1f48-33e5-4d7f-b79c-09fde0175691",
+                                                "ResourceGroup": "web"
+                                            }
+                                        },
+                                        {
+                                            "name": "TimeContext",
+                                            "value": {
+                                                "durationMs": 86400000,
+                                                "endTime": null,
+                                                "createdTime": "2018-05-04T01:22:35.782Z",
+                                                "isInitialTime": true,
+                                                "grain": 1,
+                                                "useDashboardTimeRange": false
+                                            }
+                                        }
+                                    ],
+                                    "type": "Extension/AppInsightsExtension/PartType/UsageUsersOverviewPart",
+                                    "asset": {}
+                                }
+                            },
+                            "7": {
+                                "position": {
+                                    "x": 4,
+                                    "y": 1,
+                                    "rowSpan": 1,
+                                    "colSpan": 3
+                                },
+                                "metadata": {
+                                    "inputs": [],
+                                    "type": "Extension[azure]/HubsExtension/PartType/MarkdownPart",
+                                    "settings": {}
+                                }
+                            },
+                            "8": {
+                                "position": {
+                                    "x": 7,
+                                    "y": 1,
+                                    "rowSpan": 1,
+                                    "colSpan": 1
+                                },
+                                "metadata": {
+                                    "inputs": [
+                                        {
+                                            "name": "ResourceId",
+                                            "value": "[resourceId('microsoft.insights/components', parameters('components_AppMonitor_name'))]"
+                                        },
+                                        {
+                                            "name": "DataModel",
+                                            "value": {
+                                                "version": "1.0.0",
+                                                "timeContext": {
+                                                    "durationMs": 86400000,
+                                                    "createdTime": "2018-05-04T23:42:40.072Z",
+                                                    "isInitialTime": false,
+                                                    "grain": 1,
+                                                    "useDashboardTimeRange": false
+                                                }
+                                            },
+                                            "isOptional": true
+                                        },
+                                        {
+                                            "name": "ConfigurationId",
+                                            "value": "8a02f7bf-ac0f-40e1-afe9-f0e72cfee77f",
+                                            "isOptional": true
+                                        }
+                                    ],
+                                    "type": "Extension/AppInsightsExtension/PartType/CuratedBladeFailuresPinnedPart",
+                                    "isAdapter": true,
+                                    "asset": {},
+                                    "defaultMenuItemId": "failures"
+                                }
+                            },
+                            "9": {
+                                "position": {
+                                    "x": 8,
+                                    "y": 1,
+                                    "rowSpan": 1,
+                                    "colSpan": 3
+                                },
+                                "metadata": {
+                                    "inputs": [],
+                                    "type": "Extension[azure]/HubsExtension/PartType/MarkdownPart",
+                                    "settings": {}
+                                }
+                            },
+                            "10": {
+                                "position": {
+                                    "x": 11,
+                                    "y": 1,
+                                    "rowSpan": 1,
+                                    "colSpan": 1
+                                },
+                                "metadata": {
+                                    "inputs": [
+                                        {
+                                            "name": "ResourceId",
+                                            "value": "[resourceId('microsoft.insights/components', parameters('components_AppMonitor_name'))]"
+                                        },
+                                        {
+                                            "name": "DataModel",
+                                            "value": {
+                                                "version": "1.0.0",
+                                                "timeContext": {
+                                                    "durationMs": 86400000,
+                                                    "createdTime": "2018-05-04T23:43:37.804Z",
+                                                    "isInitialTime": false,
+                                                    "grain": 1,
+                                                    "useDashboardTimeRange": false
+                                                }
+                                            },
+                                            "isOptional": true
+                                        },
+                                        {
+                                            "name": "ConfigurationId",
+                                            "value": "2a8ede4f-2bee-4b9c-aed9-2db0e8a01865",
+                                            "isOptional": true
+                                        }
+                                    ],
+                                    "type": "Extension/AppInsightsExtension/PartType/CuratedBladePerformancePinnedPart",
+                                    "isAdapter": true,
+                                    "asset": {},
+                                    "defaultMenuItemId": "performance"
+                                }
+                            },
+                            "11": {
+                                "position": {
+                                    "x": 12,
+                                    "y": 1,
+                                    "rowSpan": 1,
+                                    "colSpan": 3
+                                },
+                                "metadata": {
+                                    "inputs": [],
+                                    "type": "Extension[azure]/HubsExtension/PartType/MarkdownPart",
+                                    "settings": {}
+                                }
+                            },
+                            "12": {
+                                "position": {
+                                    "x": 15,
+                                    "y": 1,
+                                    "rowSpan": 1,
+                                    "colSpan": 1
+                                },
+                                "metadata": {
+                                    "inputs": [
+                                        {
+                                            "name": "ComponentId",
+                                            "value": {
+                                                "Name": "AppMonitor",
+                                                "SubscriptionId": "90cd1f48-33e5-4d7f-b79c-09fde0175691",
+                                                "ResourceGroup": "web"
+                                            }
+                                        },
+                                        {
+                                            "name": "MetricsExplorerJsonDefinitionId",
+                                            "value": "BrowserPerformanceTimelineMetrics"
+                                        },
+                                        {
+                                            "name": "TimeContext",
+                                            "value": {
+                                                "durationMs": 86400000,
+                                                "createdTime": "2018-05-08T12:16:27.534Z",
+                                                "isInitialTime": false,
+                                                "grain": 1,
+                                                "useDashboardTimeRange": false
+                                            }
+                                        },
+                                        {
+                                            "name": "CurrentFilter",
+                                            "value": {
+                                                "eventTypes": [
+                                                    4,
+                                                    1,
+                                                    3,
+                                                    5,
+                                                    2,
+                                                    6,
+                                                    13
+                                                ],
+                                                "typeFacets": {},
+                                                "isPermissive": false
+                                            }
+                                        },
+                                        {
+                                            "name": "id",
+                                            "value": {
+                                                "Name": "AppMonitor",
+                                                "SubscriptionId": "90cd1f48-33e5-4d7f-b79c-09fde0175691",
+                                                "ResourceGroup": "web"
+                                            }
+                                        },
+                                        {
+                                            "name": "Version",
+                                            "value": "1.0"
+                                        }
+                                    ],
+                                    "type": "Extension/AppInsightsExtension/PartType/MetricsExplorerBladePinnedPart",
+                                    "asset": {},
+                                    "defaultMenuItemId": "browser"
+                                }
+                            },
+                            "13": {
+                                "position": {
+                                    "x": 0,
+                                    "y": 2,
+                                    "rowSpan": 3,
+                                    "colSpan": 4
+                                },
+                                "metadata": {
+                                    "inputs": [
+                                        {
+                                            "name": "options",
+                                            "value": {
+                                                "chart": {
+                                                    "metrics": [
+                                                        {
+                                                            "resourceMetadata": {
+                                                                "id": "[resourceId('microsoft.insights/components', parameters('components_AppMonitor_name'))]"
+                                                            },
+                                                            "name": "sessions/count",
+                                                            "aggregationType": 5,
+                                                            "namespace": "microsoft.insights/components/kusto",
+                                                            "metricVisualization": {
+                                                                "displayName": "Sessions",
+                                                                "color": "#47BDF5"
+                                                            }
+                                                        },
+                                                        {
+                                                            "resourceMetadata": {
+                                                                "id": "[resourceId('microsoft.insights/components', parameters('components_AppMonitor_name'))]"
+                                                            },
+                                                            "name": "users/count",
+                                                            "aggregationType": 5,
+                                                            "namespace": "microsoft.insights/components/kusto",
+                                                            "metricVisualization": {
+                                                                "displayName": "Users",
+                                                                "color": "#7E58FF"
+                                                            }
+                                                        }
+                                                    ],
+                                                    "title": "Unique sessions and users",
+                                                    "visualization": {
+                                                        "chartType": 2,
+                                                        "legendVisualization": {
+                                                            "isVisible": true,
+                                                            "position": 2,
+                                                            "hideSubtitle": false
+                                                        },
+                                                        "axisVisualization": {
+                                                            "x": {
+                                                                "isVisible": true,
+                                                                "axisType": 2
+                                                            },
+                                                            "y": {
+                                                                "isVisible": true,
+                                                                "axisType": 1
+                                                            }
+                                                        }
+                                                    },
+                                                    "openBladeOnClick": {
+                                                        "openBlade": true,
+                                                        "destinationBlade": {
+                                                            "extensionName": "HubsExtension",
+                                                            "bladeName": "ResourceMenuBlade",
+                                                            "parameters": {
+                                                                "id": "[resourceId('microsoft.insights/components', parameters('components_AppMonitor_name'))]",
+                                                                "menuid": "segmentationUsers"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "name": "sharedTimeRange",
+                                            "isOptional": true
+                                        }
+                                    ],
+                                    "type": "Extension/HubsExtension/PartType/MonitorChartPart",
+                                    "settings": {}
+                                }
+                            },
+                            "14": {
+                                "position": {
+                                    "x": 4,
+                                    "y": 2,
+                                    "rowSpan": 3,
+                                    "colSpan": 4
+                                },
+                                "metadata": {
+                                    "inputs": [
+                                        {
+                                            "name": "options",
+                                            "value": {
+                                                "chart": {
+                                                    "metrics": [
+                                                        {
+                                                            "resourceMetadata": {
+                                                                "id": "[resourceId('microsoft.insights/components', parameters('components_AppMonitor_name'))]"
+                                                            },
+                                                            "name": "requests/failed",
+                                                            "aggregationType": 7,
+                                                            "namespace": "microsoft.insights/components",
+                                                            "metricVisualization": {
+                                                                "displayName": "Failed requests",
+                                                                "color": "#EC008C"
+                                                            }
+                                                        }
+                                                    ],
+                                                    "title": "Failed requests",
+                                                    "visualization": {
+                                                        "chartType": 3,
+                                                        "legendVisualization": {
+                                                            "isVisible": true,
+                                                            "position": 2,
+                                                            "hideSubtitle": false
+                                                        },
+                                                        "axisVisualization": {
+                                                            "x": {
+                                                                "isVisible": true,
+                                                                "axisType": 2
+                                                            },
+                                                            "y": {
+                                                                "isVisible": true,
+                                                                "axisType": 1
+                                                            }
+                                                        }
+                                                    },
+                                                    "openBladeOnClick": {
+                                                        "openBlade": true,
+                                                        "destinationBlade": {
+                                                            "extensionName": "HubsExtension",
+                                                            "bladeName": "ResourceMenuBlade",
+                                                            "parameters": {
+                                                                "id": "[resourceId('microsoft.insights/components', parameters('components_AppMonitor_name'))]",
+                                                                "menuid": "failures"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "name": "sharedTimeRange",
+                                            "isOptional": true
+                                        }
+                                    ],
+                                    "type": "Extension/HubsExtension/PartType/MonitorChartPart",
+                                    "settings": {}
+                                }
+                            },
+                            "15": {
+                                "position": {
+                                    "x": 8,
+                                    "y": 2,
+                                    "rowSpan": 3,
+                                    "colSpan": 4
+                                },
+                                "metadata": {
+                                    "inputs": [
+                                        {
+                                            "name": "options",
+                                            "value": {
+                                                "chart": {
+                                                    "metrics": [
+                                                        {
+                                                            "resourceMetadata": {
+                                                                "id": "[resourceId('microsoft.insights/components', parameters('components_AppMonitor_name'))]"
+                                                            },
+                                                            "name": "requests/duration",
+                                                            "aggregationType": 4,
+                                                            "namespace": "microsoft.insights/components",
+                                                            "metricVisualization": {
+                                                                "displayName": "Server response time",
+                                                                "color": "#00BCF2"
+                                                            }
+                                                        }
+                                                    ],
+                                                    "title": "Server response time",
+                                                    "visualization": {
+                                                        "chartType": 2,
+                                                        "legendVisualization": {
+                                                            "isVisible": true,
+                                                            "position": 2,
+                                                            "hideSubtitle": false
+                                                        },
+                                                        "axisVisualization": {
+                                                            "x": {
+                                                                "isVisible": true,
+                                                                "axisType": 2
+                                                            },
+                                                            "y": {
+                                                                "isVisible": true,
+                                                                "axisType": 1
+                                                            }
+                                                        }
+                                                    },
+                                                    "openBladeOnClick": {
+                                                        "openBlade": true,
+                                                        "destinationBlade": {
+                                                            "extensionName": "HubsExtension",
+                                                            "bladeName": "ResourceMenuBlade",
+                                                            "parameters": {
+                                                                "id": "[resourceId('microsoft.insights/components', parameters('components_AppMonitor_name'))]",
+                                                                "menuid": "performance"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "name": "sharedTimeRange",
+                                            "isOptional": true
+                                        }
+                                    ],
+                                    "type": "Extension/HubsExtension/PartType/MonitorChartPart",
+                                    "settings": {}
+                                }
+                            },
+                            "16": {
+                                "position": {
+                                    "x": 12,
+                                    "y": 2,
+                                    "rowSpan": 3,
+                                    "colSpan": 4
+                                },
+                                "metadata": {
+                                    "inputs": [
+                                        {
+                                            "name": "options",
+                                            "value": {
+                                                "chart": {
+                                                    "metrics": [
+                                                        {
+                                                            "resourceMetadata": {
+                                                                "id": "[resourceId('microsoft.insights/components', parameters('components_AppMonitor_name'))]"
+                                                            },
+                                                            "name": "browserTimings/networkDuration",
+                                                            "aggregationType": 4,
+                                                            "namespace": "microsoft.insights/components",
+                                                            "metricVisualization": {
+                                                                "displayName": "Page load network connect time",
+                                                                "color": "#7E58FF"
+                                                            }
+                                                        },
+                                                        {
+                                                            "resourceMetadata": {
+                                                                "id": "[resourceId('microsoft.insights/components', parameters('components_AppMonitor_name'))]"
+                                                            },
+                                                            "name": "browserTimings/processingDuration",
+                                                            "aggregationType": 4,
+                                                            "namespace": "microsoft.insights/components",
+                                                            "metricVisualization": {
+                                                                "displayName": "Client processing time",
+                                                                "color": "#44F1C8"
+                                                            }
+                                                        },
+                                                        {
+                                                            "resourceMetadata": {
+                                                                "id": "[resourceId('microsoft.insights/components', parameters('components_AppMonitor_name'))]"
+                                                            },
+                                                            "name": "browserTimings/sendDuration",
+                                                            "aggregationType": 4,
+                                                            "namespace": "microsoft.insights/components",
+                                                            "metricVisualization": {
+                                                                "displayName": "Send request time",
+                                                                "color": "#EB9371"
+                                                            }
+                                                        },
+                                                        {
+                                                            "resourceMetadata": {
+                                                                "id": "[resourceId('microsoft.insights/components', parameters('components_AppMonitor_name'))]"
+                                                            },
+                                                            "name": "browserTimings/receiveDuration",
+                                                            "aggregationType": 4,
+                                                            "namespace": "microsoft.insights/components",
+                                                            "metricVisualization": {
+                                                                "displayName": "Receiving response time",
+                                                                "color": "#0672F1"
+                                                            }
+                                                        }
+                                                    ],
+                                                    "title": "Average page load time breakdown",
+                                                    "visualization": {
+                                                        "chartType": 3,
+                                                        "legendVisualization": {
+                                                            "isVisible": true,
+                                                            "position": 2,
+                                                            "hideSubtitle": false
+                                                        },
+                                                        "axisVisualization": {
+                                                            "x": {
+                                                                "isVisible": true,
+                                                                "axisType": 2
+                                                            },
+                                                            "y": {
+                                                                "isVisible": true,
+                                                                "axisType": 1
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "name": "sharedTimeRange",
+                                            "isOptional": true
+                                        }
+                                    ],
+                                    "type": "Extension/HubsExtension/PartType/MonitorChartPart",
+                                    "settings": {}
+                                }
+                            },
+                            "17": {
+                                "position": {
+                                    "x": 0,
+                                    "y": 5,
+                                    "rowSpan": 3,
+                                    "colSpan": 4
+                                },
+                                "metadata": {
+                                    "inputs": [
+                                        {
+                                            "name": "options",
+                                            "value": {
+                                                "chart": {
+                                                    "metrics": [
+                                                        {
+                                                            "resourceMetadata": {
+                                                                "id": "[resourceId('microsoft.insights/components', parameters('components_AppMonitor_name'))]"
+                                                            },
+                                                            "name": "availabilityResults/availabilityPercentage",
+                                                            "aggregationType": 4,
+                                                            "namespace": "microsoft.insights/components",
+                                                            "metricVisualization": {
+                                                                "displayName": "Availability",
+                                                                "color": "#47BDF5"
+                                                            }
+                                                        }
+                                                    ],
+                                                    "title": "Average availability",
+                                                    "visualization": {
+                                                        "chartType": 3,
+                                                        "legendVisualization": {
+                                                            "isVisible": true,
+                                                            "position": 2,
+                                                            "hideSubtitle": false
+                                                        },
+                                                        "axisVisualization": {
+                                                            "x": {
+                                                                "isVisible": true,
+                                                                "axisType": 2
+                                                            },
+                                                            "y": {
+                                                                "isVisible": true,
+                                                                "axisType": 1
+                                                            }
+                                                        }
+                                                    },
+                                                    "openBladeOnClick": {
+                                                        "openBlade": true,
+                                                        "destinationBlade": {
+                                                            "extensionName": "HubsExtension",
+                                                            "bladeName": "ResourceMenuBlade",
+                                                            "parameters": {
+                                                                "id": "[resourceId('microsoft.insights/components', parameters('components_AppMonitor_name'))]",
+                                                                "menuid": "availability"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "name": "sharedTimeRange",
+                                            "isOptional": true
+                                        }
+                                    ],
+                                    "type": "Extension/HubsExtension/PartType/MonitorChartPart",
+                                    "settings": {}
+                                }
+                            },
+                            "18": {
+                                "position": {
+                                    "x": 4,
+                                    "y": 5,
+                                    "rowSpan": 3,
+                                    "colSpan": 4
+                                },
+                                "metadata": {
+                                    "inputs": [
+                                        {
+                                            "name": "options",
+                                            "value": {
+                                                "chart": {
+                                                    "metrics": [
+                                                        {
+                                                            "resourceMetadata": {
+                                                                "id": "[resourceId('microsoft.insights/components', parameters('components_AppMonitor_name'))]"
+                                                            },
+                                                            "name": "exceptions/server",
+                                                            "aggregationType": 7,
+                                                            "namespace": "microsoft.insights/components",
+                                                            "metricVisualization": {
+                                                                "displayName": "Server exceptions",
+                                                                "color": "#47BDF5"
+                                                            }
+                                                        },
+                                                        {
+                                                            "resourceMetadata": {
+                                                                "id": "[resourceId('microsoft.insights/components', parameters('components_AppMonitor_name'))]"
+                                                            },
+                                                            "name": "dependencies/failed",
+                                                            "aggregationType": 7,
+                                                            "namespace": "microsoft.insights/components",
+                                                            "metricVisualization": {
+                                                                "displayName": "Dependency failures",
+                                                                "color": "#7E58FF"
+                                                            }
+                                                        }
+                                                    ],
+                                                    "title": "Server exceptions and Dependency failures",
+                                                    "visualization": {
+                                                        "chartType": 2,
+                                                        "legendVisualization": {
+                                                            "isVisible": true,
+                                                            "position": 2,
+                                                            "hideSubtitle": false
+                                                        },
+                                                        "axisVisualization": {
+                                                            "x": {
+                                                                "isVisible": true,
+                                                                "axisType": 2
+                                                            },
+                                                            "y": {
+                                                                "isVisible": true,
+                                                                "axisType": 1
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "name": "sharedTimeRange",
+                                            "isOptional": true
+                                        }
+                                    ],
+                                    "type": "Extension/HubsExtension/PartType/MonitorChartPart",
+                                    "settings": {}
+                                }
+                            },
+                            "19": {
+                                "position": {
+                                    "x": 8,
+                                    "y": 5,
+                                    "rowSpan": 3,
+                                    "colSpan": 4
+                                },
+                                "metadata": {
+                                    "inputs": [
+                                        {
+                                            "name": "options",
+                                            "value": {
+                                                "chart": {
+                                                    "metrics": [
+                                                        {
+                                                            "resourceMetadata": {
+                                                                "id": "[resourceId('microsoft.insights/components', parameters('components_AppMonitor_name'))]"
+                                                            },
+                                                            "name": "performanceCounters/processorCpuPercentage",
+                                                            "aggregationType": 4,
+                                                            "namespace": "microsoft.insights/components",
+                                                            "metricVisualization": {
+                                                                "displayName": "Processor time",
+                                                                "color": "#47BDF5"
+                                                            }
+                                                        },
+                                                        {
+                                                            "resourceMetadata": {
+                                                                "id": "[resourceId('microsoft.insights/components', parameters('components_AppMonitor_name'))]"
+                                                            },
+                                                            "name": "performanceCounters/processCpuPercentage",
+                                                            "aggregationType": 4,
+                                                            "namespace": "microsoft.insights/components",
+                                                            "metricVisualization": {
+                                                                "displayName": "Process CPU",
+                                                                "color": "#7E58FF"
+                                                            }
+                                                        }
+                                                    ],
+                                                    "title": "Average processor and process CPU utilization",
+                                                    "visualization": {
+                                                        "chartType": 2,
+                                                        "legendVisualization": {
+                                                            "isVisible": true,
+                                                            "position": 2,
+                                                            "hideSubtitle": false
+                                                        },
+                                                        "axisVisualization": {
+                                                            "x": {
+                                                                "isVisible": true,
+                                                                "axisType": 2
+                                                            },
+                                                            "y": {
+                                                                "isVisible": true,
+                                                                "axisType": 1
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "name": "sharedTimeRange",
+                                            "isOptional": true
+                                        }
+                                    ],
+                                    "type": "Extension/HubsExtension/PartType/MonitorChartPart",
+                                    "settings": {}
+                                }
+                            },
+                            "20": {
+                                "position": {
+                                    "x": 12,
+                                    "y": 5,
+                                    "rowSpan": 3,
+                                    "colSpan": 4
+                                },
+                                "metadata": {
+                                    "inputs": [
+                                        {
+                                            "name": "options",
+                                            "value": {
+                                                "chart": {
+                                                    "metrics": [
+                                                        {
+                                                            "resourceMetadata": {
+                                                                "id": "[resourceId('microsoft.insights/components', parameters('components_AppMonitor_name'))]"
+                                                            },
+                                                            "name": "exceptions/browser",
+                                                            "aggregationType": 7,
+                                                            "namespace": "microsoft.insights/components",
+                                                            "metricVisualization": {
+                                                                "displayName": "Browser exceptions",
+                                                                "color": "#47BDF5"
+                                                            }
+                                                        }
+                                                    ],
+                                                    "title": "Browser exceptions",
+                                                    "visualization": {
+                                                        "chartType": 2,
+                                                        "legendVisualization": {
+                                                            "isVisible": true,
+                                                            "position": 2,
+                                                            "hideSubtitle": false
+                                                        },
+                                                        "axisVisualization": {
+                                                            "x": {
+                                                                "isVisible": true,
+                                                                "axisType": 2
+                                                            },
+                                                            "y": {
+                                                                "isVisible": true,
+                                                                "axisType": 1
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "name": "sharedTimeRange",
+                                            "isOptional": true
+                                        }
+                                    ],
+                                    "type": "Extension/HubsExtension/PartType/MonitorChartPart",
+                                    "settings": {}
+                                }
+                            },
+                            "21": {
+                                "position": {
+                                    "x": 0,
+                                    "y": 8,
+                                    "rowSpan": 3,
+                                    "colSpan": 4
+                                },
+                                "metadata": {
+                                    "inputs": [
+                                        {
+                                            "name": "options",
+                                            "value": {
+                                                "chart": {
+                                                    "metrics": [
+                                                        {
+                                                            "resourceMetadata": {
+                                                                "id": "[resourceId('microsoft.insights/components', parameters('components_AppMonitor_name'))]"
+                                                            },
+                                                            "name": "availabilityResults/count",
+                                                            "aggregationType": 7,
+                                                            "namespace": "microsoft.insights/components",
+                                                            "metricVisualization": {
+                                                                "displayName": "Availability test results count",
+                                                                "color": "#47BDF5"
+                                                            }
+                                                        }
+                                                    ],
+                                                    "title": "Availability test results count",
+                                                    "visualization": {
+                                                        "chartType": 2,
+                                                        "legendVisualization": {
+                                                            "isVisible": true,
+                                                            "position": 2,
+                                                            "hideSubtitle": false
+                                                        },
+                                                        "axisVisualization": {
+                                                            "x": {
+                                                                "isVisible": true,
+                                                                "axisType": 2
+                                                            },
+                                                            "y": {
+                                                                "isVisible": true,
+                                                                "axisType": 1
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "name": "sharedTimeRange",
+                                            "isOptional": true
+                                        }
+                                    ],
+                                    "type": "Extension/HubsExtension/PartType/MonitorChartPart",
+                                    "settings": {}
+                                }
+                            },
+                            "22": {
+                                "position": {
+                                    "x": 4,
+                                    "y": 8,
+                                    "rowSpan": 3,
+                                    "colSpan": 4
+                                },
+                                "metadata": {
+                                    "inputs": [
+                                        {
+                                            "name": "options",
+                                            "value": {
+                                                "chart": {
+                                                    "metrics": [
+                                                        {
+                                                            "resourceMetadata": {
+                                                                "id": "[resourceId('microsoft.insights/components', parameters('components_AppMonitor_name'))]"
+                                                            },
+                                                            "name": "performanceCounters/processIOBytesPerSecond",
+                                                            "aggregationType": 4,
+                                                            "namespace": "microsoft.insights/components",
+                                                            "metricVisualization": {
+                                                                "displayName": "Process IO rate",
+                                                                "color": "#47BDF5"
+                                                            }
+                                                        }
+                                                    ],
+                                                    "title": "Average process I/O rate",
+                                                    "visualization": {
+                                                        "chartType": 2,
+                                                        "legendVisualization": {
+                                                            "isVisible": true,
+                                                            "position": 2,
+                                                            "hideSubtitle": false
+                                                        },
+                                                        "axisVisualization": {
+                                                            "x": {
+                                                                "isVisible": true,
+                                                                "axisType": 2
+                                                            },
+                                                            "y": {
+                                                                "isVisible": true,
+                                                                "axisType": 1
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "name": "sharedTimeRange",
+                                            "isOptional": true
+                                        }
+                                    ],
+                                    "type": "Extension/HubsExtension/PartType/MonitorChartPart",
+                                    "settings": {}
+                                }
+                            },
+                            "23": {
+                                "position": {
+                                    "x": 8,
+                                    "y": 8,
+                                    "rowSpan": 3,
+                                    "colSpan": 4
+                                },
+                                "metadata": {
+                                    "inputs": [
+                                        {
+                                            "name": "options",
+                                            "value": {
+                                                "chart": {
+                                                    "metrics": [
+                                                        {
+                                                            "resourceMetadata": {
+                                                                "id": "[resourceId('microsoft.insights/components', parameters('components_AppMonitor_name'))]"
+                                                            },
+                                                            "name": "performanceCounters/memoryAvailableBytes",
+                                                            "aggregationType": 4,
+                                                            "namespace": "microsoft.insights/components",
+                                                            "metricVisualization": {
+                                                                "displayName": "Available memory",
+                                                                "color": "#47BDF5"
+                                                            }
+                                                        }
+                                                    ],
+                                                    "title": "Average available memory",
+                                                    "visualization": {
+                                                        "chartType": 2,
+                                                        "legendVisualization": {
+                                                            "isVisible": true,
+                                                            "position": 2,
+                                                            "hideSubtitle": false
+                                                        },
+                                                        "axisVisualization": {
+                                                            "x": {
+                                                                "isVisible": true,
+                                                                "axisType": 2
+                                                            },
+                                                            "y": {
+                                                                "isVisible": true,
+                                                                "axisType": 1
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "name": "sharedTimeRange",
+                                            "isOptional": true
+                                        }
+                                    ],
+                                    "type": "Extension/HubsExtension/PartType/MonitorChartPart",
+                                    "settings": {}
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites",
+            "apiVersion": "2018-11-01",
+            "name": "[parameters('sites_deniya_app_name')]",
+            "location": "Australia Central",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/serverfarms', parameters('serverfarms_ASP_web_bc8e_name'))]"
+            ],
+            "kind": "app,linux",
+            "properties": {
+                "enabled": true,
+                "hostNameSslStates": [
+                    {
+                        "name": "[concat(parameters('sites_deniya_app_name'), '.azurewebsites.net')]",
+                        "sslState": "Disabled",
+                        "hostType": "Standard"
+                    },
+                    {
+                        "name": "[concat(parameters('sites_deniya_app_name'), '.scm.azurewebsites.net')]",
+                        "sslState": "Disabled",
+                        "hostType": "Repository"
+                    }
+                ],
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('serverfarms_ASP_web_bc8e_name'))]",
+                "reserved": true,
+                "isXenon": false,
+                "hyperV": false,
+                "siteConfig": {},
+                "scmSiteAlsoStopped": false,
+                "clientAffinityEnabled": false,
+                "clientCertEnabled": false,
+                "hostNamesDisabled": false,
+                "containerSize": 0,
+                "dailyMemoryTimeQuota": 0,
+                "httpsOnly": false,
+                "redundancyMode": "None"
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites",
+            "apiVersion": "2018-11-01",
+            "name": "[parameters('sites_hms_sql_web_name')]",
+            "location": "Australia Central",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/serverfarms', parameters('serverfarms_ASP_web_bc8e_name'))]"
+            ],
+            "kind": "app,linux",
+            "properties": {
+                "enabled": true,
+                "hostNameSslStates": [
+                    {
+                        "name": "[concat(parameters('sites_hms_sql_web_name'), '.azurewebsites.net')]",
+                        "sslState": "Disabled",
+                        "hostType": "Standard"
+                    },
+                    {
+                        "name": "[concat(parameters('sites_hms_sql_web_name'), '.scm.azurewebsites.net')]",
+                        "sslState": "Disabled",
+                        "hostType": "Repository"
+                    }
+                ],
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('serverfarms_ASP_web_bc8e_name'))]",
+                "reserved": true,
+                "isXenon": false,
+                "hyperV": false,
+                "siteConfig": {},
+                "scmSiteAlsoStopped": false,
+                "clientAffinityEnabled": false,
+                "clientCertEnabled": false,
+                "hostNamesDisabled": false,
+                "containerSize": 0,
+                "dailyMemoryTimeQuota": 0,
+                "httpsOnly": false,
+                "redundancyMode": "None"
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites/config",
+            "apiVersion": "2018-11-01",
+            "name": "[concat(parameters('sites_deniya_app_name'), '/web')]",
+            "location": "Australia Central",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('sites_deniya_app_name'))]"
+            ],
+            "properties": {
+                "numberOfWorkers": 1,
+                "defaultDocuments": [
+                    "Default.htm",
+                    "Default.html",
+                    "Default.asp",
+                    "index.htm",
+                    "index.html",
+                    "iisstart.htm",
+                    "default.aspx",
+                    "index.php",
+                    "hostingstart.html"
+                ],
+                "netFrameworkVersion": "v4.0",
+                "linuxFxVersion": "NODE|10-lts",
+                "requestTracingEnabled": false,
+                "remoteDebuggingEnabled": false,
+                "remoteDebuggingVersion": "VS2019",
+                "httpLoggingEnabled": false,
+                "logsDirectorySizeLimit": 35,
+                "detailedErrorLoggingEnabled": false,
+                "publishingUsername": "$deniya-app",
+                "azureStorageAccounts": {},
+                "scmType": "None",
+                "use32BitWorkerProcess": true,
+                "webSocketsEnabled": false,
+                "alwaysOn": false,
+                "managedPipelineMode": "Integrated",
+                "virtualApplications": [
+                    {
+                        "virtualPath": "/",
+                        "physicalPath": "site\\wwwroot",
+                        "preloadEnabled": false
+                    }
+                ],
+                "loadBalancing": "LeastRequests",
+                "experiments": {
+                    "rampUpRules": []
+                },
+                "autoHealEnabled": false,
+                "localMySqlEnabled": false,
+                "ipSecurityRestrictions": [
+                    {
+                        "ipAddress": "Any",
+                        "action": "Allow",
+                        "priority": 1,
+                        "name": "Allow all",
+                        "description": "Allow all access"
+                    }
+                ],
+                "scmIpSecurityRestrictions": [
+                    {
+                        "ipAddress": "Any",
+                        "action": "Allow",
+                        "priority": 1,
+                        "name": "Allow all",
+                        "description": "Allow all access"
+                    }
+                ],
+                "scmIpSecurityRestrictionsUseMain": false,
+                "http20Enabled": false,
+                "minTlsVersion": "1.2",
+                "ftpsState": "AllAllowed",
+                "reservedInstanceCount": 0
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites/config",
+            "apiVersion": "2018-11-01",
+            "name": "[concat(parameters('sites_hms_sql_web_name'), '/web')]",
+            "location": "Australia Central",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('sites_hms_sql_web_name'))]"
+            ],
+            "properties": {
+                "numberOfWorkers": 1,
+                "defaultDocuments": [
+                    "Default.htm",
+                    "Default.html",
+                    "Default.asp",
+                    "index.htm",
+                    "index.html",
+                    "iisstart.htm",
+                    "default.aspx",
+                    "index.php",
+                    "hostingstart.html"
+                ],
+                "netFrameworkVersion": "v4.0",
+                "linuxFxVersion": "NODE|10-lts",
+                "requestTracingEnabled": false,
+                "remoteDebuggingEnabled": false,
+                "remoteDebuggingVersion": "VS2019",
+                "httpLoggingEnabled": false,
+                "logsDirectorySizeLimit": 35,
+                "detailedErrorLoggingEnabled": false,
+                "publishingUsername": "$hms-sql-web",
+                "azureStorageAccounts": {},
+                "scmType": "GitHub",
+                "use32BitWorkerProcess": true,
+                "webSocketsEnabled": false,
+                "alwaysOn": false,
+                "managedPipelineMode": "Integrated",
+                "virtualApplications": [
+                    {
+                        "virtualPath": "/",
+                        "physicalPath": "site\\wwwroot",
+                        "preloadEnabled": false
+                    }
+                ],
+                "loadBalancing": "LeastRequests",
+                "experiments": {
+                    "rampUpRules": []
+                },
+                "autoHealEnabled": false,
+                "localMySqlEnabled": false,
+                "ipSecurityRestrictions": [
+                    {
+                        "ipAddress": "Any",
+                        "action": "Allow",
+                        "priority": 1,
+                        "name": "Allow all",
+                        "description": "Allow all access"
+                    }
+                ],
+                "scmIpSecurityRestrictions": [
+                    {
+                        "ipAddress": "Any",
+                        "action": "Allow",
+                        "priority": 1,
+                        "name": "Allow all",
+                        "description": "Allow all access"
+                    }
+                ],
+                "scmIpSecurityRestrictionsUseMain": false,
+                "http20Enabled": false,
+                "minTlsVersion": "1.2",
+                "ftpsState": "AllAllowed",
+                "reservedInstanceCount": 0
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites/deployments",
+            "apiVersion": "2018-11-01",
+            "name": "[concat(parameters('sites_deniya_app_name'), '/11715d34eee6f0c3760cae95adbbdba8ba1b9af91596791870296')]",
+            "location": "Australia Central",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('sites_deniya_app_name'))]"
+            ],
+            "properties": {
+                "status": 4,
+                "author": "sameerahewamaddumage",
+                "deployer": "GitHub",
+                "message": "{\"type\":\"Deployment\",\"sha\":\"11715d34eee6f0c3760cae95adbbdba8ba1b9af9\",\"repoName\":\"sameerahewamaddumage/web-service-01\",\"slotName\":\"production\"}",
+                "start_time": "2020-08-07T09:17:51.6429385Z",
+                "end_time": "2020-08-07T09:17:51.6429385Z",
+                "active": false
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites/deployments",
+            "apiVersion": "2018-11-01",
+            "name": "[concat(parameters('sites_deniya_app_name'), '/326d0b4d43b12cf009c670fed676ce85e4e28e251596889798849')]",
+            "location": "Australia Central",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('sites_deniya_app_name'))]"
+            ],
+            "properties": {
+                "status": 4,
+                "author": "sameerahewamaddumage",
+                "deployer": "GitHub",
+                "message": "{\"type\":\"Deployment\",\"sha\":\"326d0b4d43b12cf009c670fed676ce85e4e28e25\",\"repoName\":\"sameerahewamaddumage/web-service-01\",\"slotName\":\"production\"}",
+                "start_time": "2020-08-08T12:30:00.4260135Z",
+                "end_time": "2020-08-08T12:30:00.4260135Z",
+                "active": true
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites/deployments",
+            "apiVersion": "2018-11-01",
+            "name": "[concat(parameters('sites_deniya_app_name'), '/9c23a490706e40788e0f4d8aecd4a7df')]",
+            "location": "Australia Central",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('sites_deniya_app_name'))]"
+            ],
+            "properties": {
+                "status": 4,
+                "author_email": "N/A",
+                "author": "N/A",
+                "deployer": "GITHUB_ZIP_DEPLOY",
+                "message": "Created via a push deployment",
+                "start_time": "2020-08-08T12:29:45.9895214Z",
+                "end_time": "2020-08-08T12:29:54.8569416Z",
+                "active": false
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites/deployments",
+            "apiVersion": "2018-11-01",
+            "name": "[concat(parameters('sites_hms_sql_web_name'), '/be274bef830a562850251d71a3b441ad542c792c')]",
+            "location": "Australia Central",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('sites_hms_sql_web_name'))]"
+            ],
+            "properties": {
+                "status": 3,
+                "author_email": "31875604+sameerahewamaddumage@users.noreply.github.com",
+                "author": "Sameera Hewamaddumage",
+                "deployer": "GitHub",
+                "message": "Update azure.yml",
+                "start_time": "2020-08-08T13:07:43.1547671Z",
+                "end_time": "2020-08-08T13:09:05.0546727Z",
+                "active": false
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites/deployments",
+            "apiVersion": "2018-11-01",
+            "name": "[concat(parameters('sites_deniya_app_name'), '/f8a4665c1cc6df0281f9e2cb40dc843358a4ee191596889751169')]",
+            "location": "Australia Central",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('sites_deniya_app_name'))]"
+            ],
+            "properties": {
+                "status": 3,
+                "author": "sameerahewamaddumage",
+                "deployer": "GitHub",
+                "message": "{\"type\":\"Deployment\",\"sha\":\"f8a4665c1cc6df0281f9e2cb40dc843358a4ee19\",\"repoName\":\"sameerahewamaddumage/web-service-01\",\"slotName\":\"production\"}",
+                "start_time": "2020-08-08T12:29:12.1222251Z",
+                "end_time": "2020-08-08T12:29:12.1222251Z",
+                "active": false
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites/deployments",
+            "apiVersion": "2018-11-01",
+            "name": "[concat(parameters('sites_deniya_app_name'), '/fecaff8a99a04d589e7c76a2f57667f5')]",
+            "location": "Australia Central",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('sites_deniya_app_name'))]"
+            ],
+            "properties": {
+                "status": 4,
+                "author_email": "N/A",
+                "author": "N/A",
+                "deployer": "GITHUB_ZIP_DEPLOY",
+                "message": "Created via a push deployment",
+                "start_time": "2020-08-07T09:17:25.2410121Z",
+                "end_time": "2020-08-07T09:17:42.4820349Z",
+                "active": false
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites/hostNameBindings",
+            "apiVersion": "2018-11-01",
+            "name": "[concat(parameters('sites_deniya_app_name'), '/', parameters('sites_deniya_app_name'), '.azurewebsites.net')]",
+            "location": "Australia Central",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('sites_deniya_app_name'))]"
+            ],
+            "properties": {
+                "siteName": "deniya-app",
+                "hostNameType": "Verified"
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites/hostNameBindings",
+            "apiVersion": "2018-11-01",
+            "name": "[concat(parameters('sites_hms_sql_web_name'), '/', parameters('sites_hms_sql_web_name'), '.azurewebsites.net')]",
+            "location": "Australia Central",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('sites_hms_sql_web_name'))]"
+            ],
+            "properties": {
+                "siteName": "hms-sql-web",
+                "hostNameType": "Verified"
+            }
+        },
+        {
+            "type": "microsoft.alertsmanagement/smartdetectoralertrules",
+            "apiVersion": "2019-06-01",
+            "name": "[parameters('smartdetectoralertrules_failure_anomalies___appmonitor_name')]",
+            "location": "global",
+            "dependsOn": [
+                "[resourceId('microsoft.insights/components', parameters('components_AppMonitor_name'))]",
+                "[resourceId('microsoft.insights/actionGroups', parameters('actionGroups_Application_Insights_Smart_Detection_name'))]"
+            ],
+            "properties": {
+                "description": "Failure Anomalies notifies you of an unusual rise in the rate of failed HTTP requests or dependency calls.",
+                "state": "Enabled",
+                "severity": "Sev3",
+                "frequency": "PT1M",
+                "detector": {
+                    "id": "FailureAnomaliesDetector",
+                    "name": "Failure Anomalies",
+                    "description": "Detects if your application experiences an abnormal rise in the rate of HTTP requests or dependency calls that are reported as failed. The anomaly detection uses machine learning algorithms and occurs in near real time, therefore there's no need to define a frequency for this signal.<br/></br/>To help you triage and diagnose the problem, an analysis of the characteristics of the failures and related telemetry is provided with the detection. This feature works for any app, hosted in the cloud or on your own servers, that generates request or dependency telemetry - for example, if you have a worker role that calls <a class=\"ext-smartDetecor-link\" href=\\\"https://docs.microsoft.com/azure/application-insights/app-insights-api-custom-events-metrics#trackrequest\\\" target=\\\"_blank\\\">TrackRequest()</a> or <a class=\"ext-smartDetecor-link\" href=\\\"https://docs.microsoft.com/azure/application-insights/app-insights-api-custom-events-metrics#trackdependency\\\" target=\\\"_blank\\\">TrackDependency()</a>.<br/><br/><a class=\"ext-smartDetecor-link\" href=\\\"https://docs.microsoft.com/azure/azure-monitor/app/proactive-failure-diagnostics\\\" target=\\\"_blank\\\">Learn more about Failure Anomalies</a>",
+                    "supportedResourceTypes": [
+                        "ApplicationInsights"
+                    ]
+                },
+                "scope": [
+                    "[resourceId('microsoft.insights/components', parameters('components_AppMonitor_name'))]"
+                ],
+                "actionGroups": {
+                    "groupIds": [
+                        "[resourceId('microsoft.insights/actionGroups', parameters('actionGroups_Application_Insights_Smart_Detection_name'))]"
+                    ]
+                }
+            }
+        }
+    ]
+}

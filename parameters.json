@@ -1,0 +1,39 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "Redis_sameera_name": {
+            "value": null
+        },
+        "sites_deniya_app_name": {
+            "value": null
+        },
+        "Redis_asure_hms_name": {
+            "value": null
+        },
+        "sites_hms_sql_web_name": {
+            "value": null
+        },
+        "frontdoors_front_end_name": {
+            "value": null
+        },
+        "serverfarms_ASP_web_bc8e_name": {
+            "value": null
+        },
+        "servers_mysql_db_sh_name": {
+            "value": null
+        },
+        "components_AppMonitor_name": {
+            "value": null
+        },
+        "actionGroups_Application_Insights_Smart_Detection_name": {
+            "value": null
+        },
+        "dashboards_7fd83c51_fec2_4eb7_8e1f_2987f2b5a27e_dashboard_name": {
+            "value": null
+        },
+        "smartdetectoralertrules_failure_anomalies___appmonitor_name": {
+            "value": null
+        }
+    }
+}
